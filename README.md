@@ -22,6 +22,7 @@
 │   │   ├── schemas.py              # Pydantic request/response 모델
 │   │   ├── recommender.py          # 더미 scoring 로직
 │   │   └── errors.py               # 커스텀 에러 클래스
+│   ├── Dockerfile
 │   └── requirements.txt
 └── README.md
 ```
@@ -46,7 +47,7 @@
 |-----|------|------|
 | Day 1 | HTTP/REST/FastAPI 기본과 추천 API 계약 정의 | 완료 |
 | Day 2 | FastAPI 추천 API 구현 | 완료 |
-| Day 3 | Docker로 FastAPI 컨테이너화 | - |
+| Day 3 | Docker로 FastAPI 컨테이너화 | 완료 |
 | Day 4 | ECR에 이미지 푸시 | - |
 | Day 5 | AWS Lambda + API Gateway 실제 배포 | - |
 | Day 6 | 모델링 1일 압축 | - |
