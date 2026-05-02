@@ -33,6 +33,22 @@ uvicorn app.main:app --reload
 
 Swagger UI: http://localhost:8000/docs
 
+## Docker 실행
+
+```bash
+# 이미지 빌드
+docker build -t mini-recsys-api .
+
+# 컨테이너 실행 (포그라운드, 로그 바로 확인 가능)
+docker run -p 8000:8000 mini-recsys-api
+
+# 백그라운드 실행
+docker run -d -p 8000:8000 mini-recsys-api
+docker logs -f <컨테이너ID>   # 실시간 로그 확인
+```
+
+`-p 8000:8000`은 `호스트포트:컨테이너포트` 매핑. 컨테이너 내부 uvicorn은 `0.0.0.0:8000`으로 바인딩되어 외부 접근을 허용한다.
+
 ## 에러 코드
 
 | Status | Code | 설명 |
