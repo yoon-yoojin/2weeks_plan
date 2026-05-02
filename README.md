@@ -48,7 +48,7 @@
 | Day 1 | HTTP/REST/FastAPI 기본과 추천 API 계약 정의 | 완료 |
 | Day 2 | FastAPI 추천 API 구현 | 완료 |
 | Day 3 | Docker로 FastAPI 컨테이너화 | 완료 |
-| Day 4 | ECR에 이미지 푸시 | - |
+| Day 4 | ECR에 이미지 푸시 | 완료 |
 | Day 5 | AWS Lambda + API Gateway 실제 배포 | - |
 | Day 6 | 모델링 1일 압축 | - |
 | Day 7 | 추천 API 내부 흐름과 fallback 구현 | - |

@@ -49,6 +49,30 @@ docker logs -f <컨테이너ID>   # 실시간 로그 확인
 
 `-p 8000:8000`은 `호스트포트:컨테이너포트` 매핑. 컨테이너 내부 uvicorn은 `0.0.0.0:8000`으로 바인딩되어 외부 접근을 허용한다.
 
+## ECR 푸시
+
+```bash
+# ECR 로그인 (12시간 유효)
+aws ecr get-login-password --region ap-northeast-2 \
+  | docker login --username AWS --password-stdin \
+  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com
+
+# 로컬 이미지에 ECR URI 태그 붙이기
+docker tag mini-recsys-api:latest \
+  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
+
+# ECR에 푸시
+docker push \
+  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
+
+# 푸시 확인
+aws ecr describe-images \
+  --repository-name mini-recsys-api \
+  --region ap-northeast-2
+```
+
+ECR 레포지토리: `767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api`
+
 ## 에러 코드
 
 | Status | Code | 설명 |
