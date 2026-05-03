@@ -22,7 +22,19 @@ app/
 ├── schemas.py       # Pydantic request/response 모델
 ├── recommender.py   # scoring 로직 (현재 더미)
 └── errors.py        # 커스텀 에러 클래스
+lambda/
+├── lambda_function.py       # AWS Lambda 핸들러
+└── lambda-trust-policy.json # Lambda 실행 Role IAM trust policy
 ```
+
+## Lambda 핸즈온 (Day 5)
+
+AWS Lambda + API Gateway를 직접 연결해 서버리스 API 호출 흐름을 실습했다.
+
+- AWS 공식 Python handler 예제 기반으로 `lambda_function.py` 작성
+- API Gateway HTTP API를 Lambda에 연결해 HTTPS 엔드포인트 생성
+- API Gateway proxy integration 특성상 요청 body가 `event['body']`에 JSON 문자열로 전달됨을 확인
+- CloudWatch Logs에서 invocation 로그 확인
 
 ## 로컬 실행
 
