@@ -22,6 +22,9 @@
 │   │   ├── schemas.py              # Pydantic request/response 모델
 │   │   ├── recommender.py          # 더미 scoring 로직
 │   │   └── errors.py               # 커스텀 에러 클래스
+│   ├── lambda/
+│   │   ├── lambda_function.py      # AWS Lambda 핸들러
+│   │   └── lambda-trust-policy.json
 │   ├── Dockerfile
 │   └── requirements.txt
 └── README.md
@@ -49,7 +52,7 @@
 | Day 2 | FastAPI 추천 API 구현 | 완료 |
 | Day 3 | Docker로 FastAPI 컨테이너화 | 완료 |
 | Day 4 | ECR에 이미지 푸시 | 완료 |
-| Day 5 | AWS Lambda + API Gateway 실제 배포 | - |
+| Day 5 | AWS Lambda + API Gateway 실제 배포 | 완료 |
 | Day 6 | 모델링 1일 압축 | - |
 | Day 7 | 추천 API 내부 흐름과 fallback 구현 | - |
 | Day 8 | 테스트, 로깅, CloudWatch/운영 메트릭 설계 | - |

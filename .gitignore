@@ -48,3 +48,6 @@ logs/
 
 # Distribution / packaging
 *.whl
+
+# Lambda
+*.zip
