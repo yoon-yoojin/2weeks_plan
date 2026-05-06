@@ -5,19 +5,16 @@
 - 학습 시간: 하루 4시간
 - 방향:
   - 모델링은 1일로 압축
-  - `FastAPI`, `Docker`, `AWS Lambda`, `API Gateway`, `ECR`, `SageMaker`, `Argo CD`를 실제 실습 중심으로 학습
+  - `FastAPI`, `Docker`, `AWS Lambda`, `API Gateway`, `ECR`, `SageMaker`를 실제 실습 중심으로 학습
   - 최종적으로 "추천 API를 로컬과 AWS에서 모두 띄우고, 배포/운영/롤백 흐름까지 설명 가능한 상태"를 만든다
 
 ## 1. 전제
 - AWS 실계정이 있고, 기본적인 콘솔 접근 및 `aws cli` 사용이 가능하다고 가정한다.
 - 비용 통제를 위해 실습은 작은 리소스로 진행하고, 각 Day에 `삭제` 단계를 포함한다.
-- Argo CD는 AWS에서는 `EKS`가 가장 자연스럽지만, 13일/하루 4시간 기준으로는 `로컬 K8s + Argo CD` 또는 `기존 K8s 환경` 전제를 권장한다.
 - 실습 전에 최소 준비:
   - `aws configure`
   - 기본 region 확정
   - `Docker` 설치
-  - `kubectl` 설치
-  - 가능하면 `kind` 또는 `minikube` 설치
 
 ## 2. 최종 산출물
 - `mini-recsys-serving/`
@@ -28,9 +25,9 @@
   - `.github/workflows/ci.yml`
   - `lambda/lambda_function.py`
   - `sagemaker/inference.py`
-  - `k8s/deployment.yaml`
-  - `k8s/service.yaml`
-  - `argocd/application.yaml`
+  - `sagemaker/train_gsasrec.py`
+  - `scripts/load_test_endpoint.sh`
+  - `scripts/load_test_service.sh`
 - `aws_runbook.md`
   - Lambda 배포/호출/삭제 절차
   - ECR push 절차
@@ -109,7 +106,7 @@
 ### Day 4. ECR에 이미지 푸시
 - 학습 목표:
   - Docker 이미지를 AWS ECR에 올린다.
-  - 이후 Lambda container image 또는 K8s/EKS 배포의 기반을 만든다.
+  - 이후 서비스 배포 및 운영 자동화의 기반을 만든다.
 - 공부 내용:
   - ECR repository
   - image tag
@@ -152,157 +149,195 @@
   - 실제 HTTPS endpoint가 응답한다
   - CloudWatch Logs에서 invocation 로그를 확인했다
 
-### Day 6. 모델링 1일 압축: DeepFM / SASRec / 리랭킹 구조 설명 가능 상태 만들기
+### Day 6. 서비스 API 역할 정리 + gSASRec 배치 파이프라인 설계
 - 학습 목표:
-  - 모델 자체를 깊게 구현하기보다 서비스 파이프라인 안에서의 역할을 설명할 수 있게 만든다.
+  - `FastAPI 서비스 API`와 `SageMaker ML endpoint`의 책임을 분리한다.
+  - 오늘 이후 구현할 end-to-end 흐름의 입력/출력 계약을 고정한다.
 - 공부 내용:
-  - DeepFM: 1차 점수
-  - SASRec 계열: 시퀀스 기반 재정렬
-  - late fusion
-  - fallback
+  - 서비스 API의 역할
+  - ML endpoint의 역할
+  - 배치 파이프라인 구성 요소
 - 실습:
-  - 더미 점수 함수 2개 작성
-  - `final_score = a * deepfm_score + b * seq_score`
-  - 리랭킹 전후 top-k 비교
-- 레퍼런스:
-  - DeepFM: [https://www.ijcai.org/Proceedings/2017/239](https://www.ijcai.org/Proceedings/2017/239)
-  - SASRec: [https://arxiv.org/abs/1808.09781](https://arxiv.org/abs/1808.09781)
-- 4시간 배분:
-  - 2h 모델 구조 이해
-  - 1h 결합 예제 구현
-  - 1h 이력서 설명 문장 정리
-
-### Day 7. 추천 API 내부 흐름과 fallback 구현
-- 학습 목표:
-  - 추천 요청 처리 로직을 서비스 코드로 구현한다.
-  - cold-start, missing-profile, timeout fallback을 넣는다.
-- 공부 내용:
-  - candidate 생성
-  - scoring
-  - rerank
-  - fallback
-- 실습:
-  - `app/recommender.py` 작성
-  - fallback 3종 구현
-  - 응답에 `fallback_used` 포함
-- 레퍼런스:
-  - FastAPI Testing: [https://fastapi.tiangolo.com/tutorial/testing/](https://fastapi.tiangolo.com/tutorial/testing/)
-- 4시간 배분:
-  - 1h 로직 설계
-  - 2h 구현
-  - 1h 실패 케이스 점검
-
-### Day 8. 테스트, 로깅, CloudWatch/운영 메트릭 설계
-- 학습 목표:
-  - API를 운영 가능한 형태로 만든다.
-  - 어떤 로그와 메트릭을 봐야 하는지 정한다.
-- 공부 내용:
-  - request id
-  - latency
-  - error rate
-  - fallback rate
-  - model version
-- 실습:
-  - `pytest` 테스트 추가
-  - 구조화 로그 추가
-  - CloudWatch에서 보고 싶은 메트릭 목록 작성
-- 레퍼런스:
-  - FastAPI Testing: [https://fastapi.tiangolo.com/tutorial/testing/](https://fastapi.tiangolo.com/tutorial/testing/)
-  - CloudWatch Logs docs: [https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html)
-- 4시간 배분:
-  - 1h 테스트 설계
-  - 2h 테스트/로그 구현
-  - 1h 운영 메트릭 문서화
-
-### Day 9. SageMaker real-time endpoint 실제 배포
-- 학습 목표:
-  - SageMaker endpoint를 실제로 생성, 호출, 삭제한다.
-  - 이력서의 `SageMaker Endpoint` 항목을 실체적으로 이해한다.
-- 공부 내용:
-  - model artifact
-  - inference script
-  - endpoint config
-  - real-time endpoint
-- 실습:
-  - `sagemaker/inference.py` 작성
-  - 가능한 최소 모델 artifact 준비
-  - SageMaker model 생성
-  - endpoint config 생성
-  - endpoint 배포 및 invoke
-  - 실습 종료 후 endpoint 삭제
+  - `README.md` 기준 아키텍처를 바탕으로 `FastAPI -> SageMaker endpoint` request/response contract 정의
+  - `gSASRec` 입력 스키마 정의:
+    - `sequence`
+    - `candidate_item_ids`
+    - `top_k`
+  - 학습/추론/서비스 계층 파일 역할 정의
+  - 산출물:
+    - `design_doc_v2.md`
+    - `data_contract_gsasrec.md`
 - 레퍼런스:
   - SageMaker real-time inference: [https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html)
-  - SageMaker Python SDK inference docs: [https://sagemaker.readthedocs.io/en/stable/inference/index.html](https://sagemaker.readthedocs.io/en/stable/inference/index.html)
+  - gSASRec official PyTorch repo: [https://github.com/asash/gSASRec-pytorch](https://github.com/asash/gSASRec-pytorch)
 - 4시간 배분:
-  - 1h 구조 학습
-  - 2h 생성/호출 실습
-  - 1h 삭제 및 비용 메모
-- 종료 체크:
-  - endpoint invoke 성공
-  - endpoint/model/config 삭제 완료
+  - 1h 아키텍처 정리
+  - 2h contract 문서화
+  - 1h 구현 체크리스트 정리
 
-### Day 10. SageMaker autoscaling, versioning, 운영 runbook 작성
+### Day 7. 공개 로그 데이터 전처리 + SageMaker 학습 입력 생성
 - 학습 목표:
-  - endpoint를 띄우는 것에서 끝나지 않고 운영 관점을 정리한다.
+  - 원시 로그를 학습 가능한 시퀀스 데이터로 바꾼다.
+  - SageMaker training job 입력을 S3에 올린다.
 - 공부 내용:
-  - autoscaling
-  - versioning
-  - rollback
-  - canary/alpha rollout 개념
+  - session filtering
+  - item remapping
+  - train/valid/test split
+  - S3 업로드 구조
 - 실습:
-  - autoscaling 정책 문서 읽고 정리
-  - endpoint 운영 runbook 작성
-  - "생성 -> 검증 -> 배포 -> 롤백 -> 삭제" 절차 문서화
+  - `YOOCHOOSE` 클릭 로그 로드
+  - 세션 길이/아이템 빈도 필터링
+  - `item_id -> integer id` 매핑
+  - sequence/label 데이터 생성
+  - `train.parquet`, `valid.parquet`, `test.parquet` 생성
+  - S3 prefix 예시:
+    - `s3://.../gsasrec/input/train/`
+    - `s3://.../gsasrec/input/valid/`
+    - `s3://.../gsasrec/input/test/`
 - 레퍼런스:
-  - SageMaker real-time inference autoscaling: [https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html)
+  - YOOCHOOSE challenge overview: [https://recsys.acm.org/recsys15/challenge/](https://recsys.acm.org/recsys15/challenge/)
+  - SageMaker training data input: [https://docs.aws.amazon.com/sagemaker/latest/dg/model-access-training-data.html](https://docs.aws.amazon.com/sagemaker/latest/dg/model-access-training-data.html)
 - 4시간 배분:
-  - 1.5h 문서 학습
-  - 1.5h runbook 작성
-  - 1h 면접용 답변 메모
+  - 1h 전처리 규칙 설계
+  - 2h 전처리 코드 작성
+  - 1h S3 업로드/샘플 검증
 
-### Day 11. CI/CD: GitHub Actions로 test + Docker build + ECR push 자동화
+### Day 8. SageMaker training job으로 gSASRec 학습
 - 학습 목표:
-  - 코드 변경 시 자동 검증과 이미지 빌드를 수행한다.
-  - 배포 전 기본 품질 게이트를 만든다.
+  - `gSASRec` 학습을 SageMaker에서 1회 성공시킨다.
+  - 최소한의 파라미터로 재현 가능한 training entrypoint를 만든다.
 - 공부 내용:
-  - GitHub Actions
-  - AWS credentials in CI
-  - Docker build/push
+  - PyTorch Estimator
+  - training entrypoint
+  - hyperparameter 전달
 - 실습:
-  - `.github/workflows/ci.yml` 작성
-  - `pytest`
-  - Docker image build
-  - 가능하면 ECR push까지 자동화
+  - `train_gsasrec.py` 작성 또는 official repo script 감싸기
+  - 하이퍼파라미터 최소 세트 확정:
+    - `sequence_length`
+    - `embedding_dim`
+    - `num_blocks`
+    - `num_heads`
+    - `negs_per_pos`
+    - `gbce_t`
+  - SageMaker training job 실행
+  - CloudWatch 로그 확인
+  - model artifact 저장 확인
 - 레퍼런스:
-  - GitHub Actions docs: [https://docs.github.com/en/actions](https://docs.github.com/en/actions)
-  - Amazon ECR getting started: [https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html)
+  - Use PyTorch with SageMaker SDK: [https://sagemaker.readthedocs.io/en/stable/frameworks/pytorch/using_pytorch.html](https://sagemaker.readthedocs.io/en/stable/frameworks/pytorch/using_pytorch.html)
+  - gSASRec official PyTorch repo: [https://github.com/asash/gSASRec-pytorch](https://github.com/asash/gSASRec-pytorch)
 - 4시간 배분:
-  - 1h CI 개념
-  - 2h workflow 구현
-  - 1h 실행 로그 점검
+  - 1h 스크립트 정리
+  - 2h training job 실행
+  - 1h 로그/결과 점검
 
-### Day 12. Kubernetes + Argo CD 실습
+### Day 9. 추론 스크립트 구현 + 실시간 endpoint 생성
 - 학습 목표:
-  - GitOps 배포 흐름을 직접 경험한다.
-  - Argo CD가 운영에 왜 필요한지 체감한다.
+  - 학습 산출물을 SageMaker 실시간 endpoint로 배포할 수 있게 만든다.
+  - `model_fn`, `input_fn`, `predict_fn`, `output_fn` 기준으로 추론 API를 고정한다.
 - 공부 내용:
-  - Deployment
-  - Service
-  - Argo CD Application
-  - sync/rollback
+  - real-time inference script
+  - endpoint config
+  - invoke payload
 - 실습:
-  - `kind` 또는 `minikube` 클러스터 준비
-  - Argo CD 설치
-  - FastAPI 배포용 `deployment.yaml`, `service.yaml` 작성
-  - `argocd/application.yaml` 작성
-  - git 변경 -> sync 확인
+  - `sagemaker/inference.py` 작성
+  - 입력 예시:
+    - `{"sequence": [12, 55, 91, 103], "candidate_item_ids": [201, 305, 411], "top_k": 10}`
+  - 출력 예시:
+    - `{"item_ids": [...], "scores": [...]}`
+  - SageMaker model 생성
+  - endpoint config 생성
+  - real-time endpoint 1차 배포
+  - 샘플 payload로 invoke
 - 레퍼런스:
-  - Argo CD Getting Started: [https://argo-cd.readthedocs.io/en/release-3.4/getting_started/](https://argo-cd.readthedocs.io/en/release-3.4/getting_started/)
-  - Kubernetes basics: [https://kubernetes.io/docs/tutorials/kubernetes-basics/](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
+  - Deploy a PyTorch model: [https://sagemaker.readthedocs.io/en/stable/frameworks/pytorch/using_pytorch.html#deploy-a-pytorch-model](https://sagemaker.readthedocs.io/en/stable/frameworks/pytorch/using_pytorch.html#deploy-a-pytorch-model)
+  - SageMaker real-time endpoints: [https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html)
 - 4시간 배분:
-  - 1.5h K8s/Argo CD 설치
-  - 1.5h manifest/application 적용
-  - 1h sync 흐름 기록
+  - 1h inference script 작성
+  - 2h endpoint 생성/호출
+  - 1h 입력/출력 검증
+
+### Day 10. endpoint refresh, warm-up, 점진 배포, cutover 구현
+- 학습 목표:
+  - 새 모델 버전으로 endpoint를 안전하게 교체하는 흐름을 구현한다.
+  - 운영 환경에서 필요한 refresh/warm-up/cutover 개념을 실제 절차로 정리한다.
+- 공부 내용:
+  - new model version
+  - new endpoint config
+  - endpoint update
+  - warm-up invoke
+  - gradual rollout / cutover / rollback
+- 실습:
+  - 새 model artifact 또는 새 endpoint config 생성
+  - endpoint update 수행
+  - warm-up 요청 여러 건 보내기
+  - variant 또는 새 config 기준 트래픽 전환 방식 정리
+  - rollback 절차 `aws_runbook.md`에 기록
+  - 최소 수준으로 blue/green 또는 canary 개념을 문서/절차로 구현
+- 레퍼런스:
+  - SageMaker endpoint update: [https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html)
+  - Shadow tests and deployment guardrails: [https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails.html](https://docs.aws.amazon.com/sagemaker/latest/dg/deployment-guardrails.html)
+- 4시간 배분:
+  - 1h 개념 정리
+  - 2h endpoint update/warm-up 실습
+  - 1h cutover/rollback 문서화
+
+### Day 11. autoscaling 설정 + endpoint 부하 테스트
+- 학습 목표:
+  - endpoint의 scale-out/scale-in을 설정하고 기본 동작을 확인한다.
+  - endpoint 자체 latency와 TPS를 측정한다.
+- 공부 내용:
+  - Application Auto Scaling
+  - target tracking
+  - endpoint latency / invocation metric
+- 실습:
+  - autoscaling policy 설정
+  - min/max instance 설정
+  - 부하 테스트 도구로 endpoint 호출:
+    - `hey`, `ab`, 또는 간단한 Python script
+  - 측정 항목:
+    - p50/p95 latency
+    - error rate
+    - invocation count
+  - CloudWatch metric 확인
+- 레퍼런스:
+  - SageMaker autoscaling: [https://docs.aws.amazon.com/sagemaker/latest/dg/endpoint-auto-scaling-policy.html](https://docs.aws.amazon.com/sagemaker/latest/dg/endpoint-auto-scaling-policy.html)
+  - CloudWatch metrics for endpoints: [https://docs.aws.amazon.com/sagemaker/latest/dg/monitoring-cloudwatch.html](https://docs.aws.amazon.com/sagemaker/latest/dg/monitoring-cloudwatch.html)
+- 4시간 배분:
+  - 1h autoscaling 설정
+  - 2h 부하 테스트
+  - 1h CloudWatch metric 해석
+
+### Day 12. FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트
+- 학습 목표:
+  - `FastAPI`를 진짜 서비스 API로 리팩터링한다.
+  - `FastAPI -> SageMaker endpoint -> FastAPI response` end-to-end 흐름을 완성한다.
+- 공부 내용:
+  - SageMaker runtime client
+  - request transformation
+  - timeout / retry / fallback
+- 실습:
+  - `app/main.py`와 `app/recommender.py` 수정
+  - FastAPI 입력은 서비스 관점으로 유지:
+    - `user_id`
+    - `query` 또는 `candidate source`
+    - `top_k`
+  - 내부에서:
+    - 사용자 sequence 준비
+    - candidate list 준비
+    - SageMaker endpoint payload 생성
+    - endpoint invoke
+    - score 수신 후 응답 반환
+  - timeout 또는 5xx 시 fallback 응답 구현
+  - E2E 테스트:
+    - client -> FastAPI -> SageMaker -> response
+  - 가능하면 FastAPI 경유 부하 테스트 1회 수행
+- 레퍼런스:
+  - InvokeEndpoint API: [https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sagemaker-runtime/client/invoke_endpoint.html](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sagemaker-runtime/client/invoke_endpoint.html)
+  - FastAPI testing: [https://fastapi.tiangolo.com/tutorial/testing/](https://fastapi.tiangolo.com/tutorial/testing/)
+- 4시간 배분:
+  - 1h 서비스 API 구조 수정
+  - 2h SageMaker 연동 구현
+  - 1h E2E 테스트와 fallback 확인
 
 ### Day 13. 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리
 - 학습 목표:
@@ -340,5 +375,4 @@
 - `Lambda`는 경량 API, 이벤트 기반 처리, burst 트래픽에 유리한 케이스로 설명한다.
 - `SageMaker Endpoint`는 모델 전용 managed serving, autoscaling, inference 운영 관점으로 설명한다.
 - `FastAPI + Docker`는 서비스 로직 유연성과 개발 속도 측면으로 설명한다.
-- `Argo CD`는 GitOps, 배포 이력, drift 방지, 롤백 가능성과 연결한다.
 - 모델은 깊게 들어가기보다 "추천 파이프라인 안에서 어떤 위치에 있고, 어떻게 서빙/리랭킹에 연결되는가" 중심으로 설명한다.
