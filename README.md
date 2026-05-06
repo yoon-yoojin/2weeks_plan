@@ -167,6 +167,24 @@
 - endpoint 단독 부하 테스트
 - `FastAPI -> SageMaker endpoint` E2E 부하 테스트
 
+## 진행 현황
+
+| Day | 주제 | 상태 |
+|---|---|---|
+| Day 1 | HTTP/REST/FastAPI 기본 + 추천 API 계약 정의 | ✅ 완료 |
+| Day 2 | FastAPI 추천 API 구현 | ✅ 완료 |
+| Day 3 | Docker로 FastAPI 컨테이너화 | ✅ 완료 |
+| Day 4 | ECR에 이미지 푸시 | ✅ 완료 |
+| Day 5 | AWS Lambda + API Gateway 실제 배포 | ✅ 완료 |
+| Day 6 | 서비스 API 역할 정리 + gSASRec 배치 파이프라인 설계 | ✅ 완료 |
+| Day 7 | 공개 로그 데이터 전처리 + SageMaker 학습 입력 생성 | ⬜ 미완료 |
+| Day 8 | SageMaker training job으로 gSASRec 학습 | ⬜ 미완료 |
+| Day 9 | 추론 스크립트 구현 + 실시간 endpoint 생성 | ⬜ 미완료 |
+| Day 10 | endpoint refresh, warm-up, 점진 배포, cutover | ⬜ 미완료 |
+| Day 11 | autoscaling 설정 + endpoint 부하 테스트 | ⬜ 미완료 |
+| Day 12 | FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트 | ⬜ 미완료 |
+| Day 13 | 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리 | ⬜ 미완료 |
+
 ## 디렉토리 구조
 
 ```text
@@ -177,11 +195,14 @@
 │   └── day1_submit.md
 └── mini-recsys-serving/
     ├── README.md
+    ├── contract.md          # FastAPI ↔ SageMaker 서비스 계약 정의
     ├── app/
-    │   ├── main.py
-    │   ├── recommender.py
-    │   ├── schemas.py
-    │   └── errors.py
+    │   ├── main.py              # FastAPI 앱, exception handler, 엔드포인트
+    │   ├── schemas.py           # Pydantic 모델 (client / SageMaker 내부 계약 분리)
+    │   ├── recommender.py       # 서비스 오케스트레이터 (DynamoDB → SageMaker → fallback)
+    │   ├── store.py             # DynamoDB 조회 레이어
+    │   ├── sagemaker_client.py  # SageMaker endpoint 호출 레이어
+    │   └── errors.py            # 커스텀 에러 클래스
     ├── lambda/
     │   ├── lambda_function.py
     │   └── lambda-trust-policy.json
@@ -191,16 +212,17 @@
 
 ## 현재 상태
 
-- `mini-recsys-serving/app`의 현재 FastAPI는 아직 완전한 서비스 API가 아니라, 로컬 scorer를 직접 호출하는 단순 scoring API에 가깝습니다.
-- 최종 목표는 이를 `서비스 API`로 리팩터링하고, 내부에서 `SageMaker endpoint`를 호출하도록 바꾸는 것입니다.
+- `mini-recsys-serving/app`을 ML API에서 서비스 API로 리팩토링 완료.
+- 클라이언트는 `user_id`만 전달하며, 서비스가 DynamoDB에서 sequence/candidates를 조회하고 SageMaker endpoint를 호출하는 구조.
+- `contract.md`에 FastAPI ↔ SageMaker 계약, DynamoDB 스키마, fallback 정책이 정의되어 있음.
+- Day 7부터 실제 데이터 전처리 → SageMaker 학습 → endpoint 배포 순으로 진행 예정.
 
 ## 다음 수정 방향
 
-- `Day 6~12` 커리큘럼을 아래 순서로 재편
-  - 데이터 전처리 배치 파이프라인
-  - SageMaker 학습
-  - SageMaker endpoint 배포
-  - endpoint refresh / warm-up / gradual rollout / cutover
-  - autoscaling
-  - endpoint load test
-  - FastAPI와 SageMaker endpoint E2E 연동
+- `Day 7~13` 커리큘럼을 아래 순서로 진행
+  - 공개 로그 데이터(YOOCHOOSE) 전처리 + S3 업로드
+  - SageMaker training job으로 gSASRec 학습
+  - 추론 스크립트 구현 + real-time endpoint 배포
+  - endpoint refresh / warm-up / gradual rollout / cutover / rollback
+  - autoscaling 설정 + endpoint 부하 테스트
+  - FastAPI → SageMaker endpoint E2E 연동 및 테스트
