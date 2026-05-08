@@ -8,64 +8,65 @@
 +-------------------+
 | Client / Tester   |
 +-------------------+
+          |  user_id
+          v
++---------------------------+
+| FastAPI Service API       |
+| - validate req            |
+| - request_id 생성         |
+| - DynamoDB: seq 조회      |  ← 원본 goodsno sequence
+| - DynamoDB: candidates 조회| ← 원본 goodsno candidates
+| - timeout/retry/fallback  |
++---------------------------+
+          |  goodsno sequence + candidates
+          v
++----------------------------------+
+| SageMaker Real-time Endpoint     |
+| - input_fn:   goodsno → int id   |  ← 순변환 (매퍼 사용)
+| - predict_fn: gSASRec 추론       |
+| - output_fn:  int id → goodsno   |  ← 역변환 (매퍼 사용)
++----------------------------------+
+          |  ranked goodsno + scores
+          v
++---------------------------+
+| FastAPI Response          |
+| - rerank/fallback         |
+| - build response          |
++---------------------------+
           |
           v
 +-------------------+
-| FastAPI Service   |
-| - validate req    |
-| - request_id      |
-| - context lookup  |
-| - candidate build |
-| - timeout/retry   |
-| - fallback        |
-+-------------------+
-          |
-          v
-+-----------------------------+
-| SageMaker Runtime Invoke    |
-+-----------------------------+
-          |
-          v
-+-----------------------------+
-| SageMaker Real-time EP      |
-| - gSASRec inference         |
-| - input_fn                  |
-| - predict_fn                |
-| - output_fn                 |
-+-----------------------------+
-          |
-          v
-+-------------------+
-| Ranked Scores     |
-+-------------------+
-          |
-          v
-+-------------------+
-| FastAPI Response  |
+| Client Response   |
 +-------------------+
 ```
 
 ## 배치 파이프라인
 
-전처리, 학습, 추론 모두 SageMaker 인프라에서 실행합니다.
+전처리, 학습, 추론 모두 SageMaker 인프라에서 실행합니다. Day 10에서 SageMaker Pipelines로 전체 흐름을 하나의 파이프라인으로 연결합니다.
 
 ```text
 +---------------------+
 | Open Log Dataset    |
 | (e.g. YOOCHOOSE)    |
-| → S3 raw prefix     |
+| → S3 raw prefix     |  ← 로컬에서 1회 업로드
 +---------------------+
           |
           v
-+------------------------------+
-| SageMaker Processing Job     |
-| (SKLearnProcessor)           |
-| - filter sessions            |
-| - remap item ids             |
-| - make sequences             |
-| input:  s3://.../raw/        |
-| output: s3://.../input/      |
-+------------------------------+
++------------------------------------------+
+| SageMaker Processing Job (SKLearnProc)   |
+| - session/item 필터링                    |
+| - goodsno → integer id 매핑 생성         |
+| - leave-one-out split (train/valid/test) |
+| - test set 시퀀스를 DynamoDB에 적재      |  ← 원본 goodsno로 저장
+| - 초기 candidate set을 DynamoDB에 적재   |  ← 원본 goodsno로 저장
+|                                          |
+| 산출물:                                  |
+|   s3://.../gsasrec/input/train/          |  ← integer id 기반 parquet
+|   s3://.../gsasrec/input/valid/          |
+|   s3://.../gsasrec/input/test/           |
+|   s3://.../gsasrec/meta/item2id.json     |  ← Training Job이 번들에 포함
+|   s3://.../gsasrec/meta/id2item.json     |
++------------------------------------------+
           |
           v
 +---------------------+
@@ -73,16 +74,18 @@
 +---------------------+
           |
           v
-+---------------------+
-| SageMaker Training  |
-| Job                 |
-| - train gSASRec     |
-| - eval metrics      |
-+---------------------+
++------------------------------------------+
+| SageMaker Training Job                   |
+| - gSASRec 학습                           |
+| - 평가 지표 기록                         |
+| - model.tar.gz 생성:                     |
+|     weights + item2id.json + id2item.json|  ← 매퍼와 가중치를 함께 번들
++------------------------------------------+
           |
           v
 +---------------------+
-| Model Artifact in S3|
+| Model Artifact      |
+| in S3               |
 +---------------------+
           |
           v
@@ -109,58 +112,90 @@
 
 ## 서비스 호출 흐름
 
+FastAPI는 goodsno만 알고, integer id 변환은 SageMaker endpoint 내부에서만 이루어집니다.
+
 ```text
-+----------------------+
-| Client               |
-| POST /recommend      |
-+----------------------+
++----------------------------------+
+| Client                           |
+| POST /recommend {user_id}        |
++----------------------------------+
           |
           v
-+----------------------+
-| FastAPI Service API  |
-| - parse request      |
-| - load user context  |
-| - build candidates   |
-+----------------------+
++----------------------------------+
+| FastAPI Service API              |
+| - DynamoDB: goodsno sequence 조회|
+| - DynamoDB: goodsno candidates   |
+| - payload 생성                   |
++----------------------------------+
+          |  {sequence: [goodsno, ...], candidates: [goodsno, ...]}
+          v
++------------------------------------------+
+| SageMaker Endpoint                       |
+| input_fn:   goodsno → integer id 변환    |
+| predict_fn: gSASRec 추론                 |
+| output_fn:  integer id → goodsno 역변환  |
++------------------------------------------+
+          |  {ranked_items: [{item_id: goodsno, score}, ...]}
+          v
++----------------------------------+
+| FastAPI                          |
+| - fallback 처리                  |
+| - response 조립                  |
++----------------------------------+
           |
           v
-+----------------------+
-| Invoke ML Endpoint   |
-| sequence + candidates|
-+----------------------+
-          |
-          v
-+----------------------+
-| SageMaker Endpoint   |
-| returns item scores  |
-+----------------------+
-          |
-          v
-+----------------------+
-| FastAPI              |
-| - rerank/fallback    |
-| - build response     |
-+----------------------+
-          |
-          v
-+----------------------+
-| Client Response      |
-+----------------------+
++----------------------------------+
+| Client Response                  |
+| {items: [{item_id: goodsno, ...}]}|
++----------------------------------+
 ```
 
 ## 역할 분리
 
-- `FastAPI`
-  - 서비스 API
-  - 클라이언트 요청을 직접 받음
-  - 후보군 생성, 컨텍스트 조회, timeout/retry, fallback, 응답 조립 담당
-- `SageMaker endpoint`
-  - ML scoring API
-  - 시퀀스/후보군을 입력받아 모델 점수 또는 top-k 결과 반환
-- `Batch pipeline` (전처리/학습/추론 모두 SageMaker에서 실행)
-  - SageMaker Processing Job으로 원시 로그 전처리 및 학습 데이터 생성
-  - SageMaker Training Job으로 모델 학습 및 평가
-  - 새 endpoint config 생성과 SageMaker endpoint refresh 담당
+- `FastAPI 서비스 API`
+  - 클라이언트 요청 수신 및 응답 조립
+  - DynamoDB에서 goodsno 기반 sequence / candidate 조회
+  - SageMaker endpoint payload 생성 및 호출
+  - timeout / retry / fallback 처리
+  - **item id 변환 로직 없음 — goodsno만 다룸**
+
+- `SageMaker ML Endpoint`
+  - goodsno sequence + candidates를 입력으로 받아 ranked goodsno 반환
+  - `input_fn`: goodsno → integer id 순변환 (매퍼 사용)
+  - `predict_fn`: gSASRec 추론
+  - `output_fn`: integer id → goodsno 역변환 (매퍼 사용)
+  - **매퍼(item2id, id2item)는 model.tar.gz에 모델 가중치와 함께 번들**
+  - 매퍼와 가중치는 반드시 동일 학습 실행의 산출물이어야 함 (버전 일치 필수)
+
+- `DynamoDB`
+  - `user_sequences`: user_id → goodsno sequence (원본 상품번호 기반)
+  - `candidate_sets`: user_id → goodsno candidate list (원본 상품번호 기반)
+  - **integer id를 저장하지 않음** — ML 내부 구조와 독립적으로 유지
+
+- `Batch pipeline` (전처리/학습 모두 SageMaker에서 실행)
+  - Processing Job: 원시 로그 전처리, 매핑 생성, DynamoDB 초기 적재
+  - Training Job: gSASRec 학습, model.tar.gz(가중치 + 매퍼) 생성
+  - Day 10에서 SageMaker Pipelines로 Processing → Training → Endpoint 배포를 하나의 파이프라인으로 연결
+  - main 브랜치 push 시 GitHub Actions로 S3 코드 sync 및 파이프라인 정의 자동 갱신
+
+## 아이템 ID 설계 원칙
+
+```text
+goodsno (원본 상품번호)
+  - 클라이언트, FastAPI, DynamoDB에서 사용
+  - ML 시스템 외부에서 공유되는 유일한 item 식별자
+
+integer id (ML 내부 인덱스)
+  - SageMaker endpoint 내부에서만 사용
+  - 모델 embedding 레이어의 인덱스
+  - 학습 실행마다 재생성되므로 외부에 노출하지 않음
+
+매핑 관리 원칙
+  - item2id / id2item은 Processing Job에서 생성
+  - Training Job이 model.tar.gz에 가중치와 함께 번들
+  - 매퍼와 가중치는 반드시 동일 학습 실행의 산출물 (버전 불일치 시 추론 결과 오염)
+  - 매퍼가 바뀌어도 DynamoDB 재적재 불필요 (goodsno로 저장하기 때문)
+```
 
 ## 구현 목표
 
@@ -220,16 +255,19 @@
 ## 현재 상태
 
 - `mini-recsys-serving/app`을 ML API에서 서비스 API로 리팩토링 완료.
-- 클라이언트는 `user_id`만 전달하며, 서비스가 DynamoDB에서 sequence/candidates를 조회하고 SageMaker endpoint를 호출하는 구조.
+- 클라이언트는 `user_id`만 전달하며, 서비스가 DynamoDB에서 goodsno 기반 sequence/candidates를 조회하고 SageMaker endpoint를 호출하는 구조.
 - `contract.md`에 FastAPI ↔ SageMaker 계약, DynamoDB 스키마, fallback 정책이 정의되어 있음.
+- 아이템 ID 설계 확정: DynamoDB는 goodsno, SageMaker endpoint 내부에서만 integer id 사용 및 역변환.
 - Day 7부터 실제 데이터 전처리 → SageMaker 학습 → endpoint 배포 순으로 진행 예정.
 
 ## 다음 수정 방향
 
-- `Day 7~13` 커리큘럼을 아래 순서로 진행
-  - 공개 로그 데이터(YOOCHOOSE) 전처리 + S3 업로드
-  - SageMaker training job으로 gSASRec 학습
-  - 추론 스크립트 구현 + real-time endpoint 배포
+- `Day 7~14` 커리큘럼을 아래 순서로 진행
+  - 공개 로그 데이터(YOOCHOOSE) 전처리 + DynamoDB 적재 + S3 업로드 (Processing Job)
+  - GitHub Actions로 `sagemaker/` 코드 변경 시 S3 자동 sync
+  - SageMaker Training Job으로 gSASRec 학습 (model.tar.gz에 매퍼 번들)
+  - 추론 스크립트 구현: input_fn 순변환 + output_fn 역변환 + real-time endpoint 배포
+  - SageMaker Pipelines로 Processing → Training → Endpoint 배포 파이프라인 구성
   - endpoint refresh / warm-up / gradual rollout / cutover / rollback
   - autoscaling 설정 + endpoint 부하 테스트
   - FastAPI → SageMaker endpoint E2E 연동 및 테스트
