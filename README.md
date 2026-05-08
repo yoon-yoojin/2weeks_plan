@@ -186,10 +186,11 @@
 | Day 7 | 공개 로그 데이터 전처리 + SageMaker 학습 입력 생성 | ⬜ 미완료 |
 | Day 8 | SageMaker training job으로 gSASRec 학습 | ⬜ 미완료 |
 | Day 9 | 추론 스크립트 구현 + 실시간 endpoint 생성 | ⬜ 미완료 |
-| Day 10 | endpoint refresh, warm-up, 점진 배포, cutover | ⬜ 미완료 |
-| Day 11 | autoscaling 설정 + endpoint 부하 테스트 | ⬜ 미완료 |
-| Day 12 | FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트 | ⬜ 미완료 |
-| Day 13 | 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리 | ⬜ 미완료 |
+| Day 10 | SageMaker Pipelines로 전처리→학습→배포 파이프라인 구성 | ⬜ 미완료 |
+| Day 11 | endpoint refresh, warm-up, 점진 배포, cutover | ⬜ 미완료 |
+| Day 12 | autoscaling 설정 + endpoint 부하 테스트 | ⬜ 미완료 |
+| Day 13 | FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트 | ⬜ 미완료 |
+| Day 14 | 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리 | ⬜ 미완료 |
 
 ## 디렉토리 구조
 

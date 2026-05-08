@@ -1,7 +1,7 @@
-# 13일 집중 커리큘럼 (AWS 실계정 기반 RecSys Serving Engineering + Ops)
+# 14일 집중 커리큘럼 (AWS 실계정 기반 RecSys Serving Engineering + Ops)
 
 ## 0. 목표
-- 기간: 13일
+- 기간: 14일
 - 학습 시간: 하루 4시간
 - 방향:
   - 모델링은 1일로 압축
@@ -263,7 +263,32 @@
   - 2h endpoint 생성/호출
   - 1h 입력/출력 검증
 
-### Day 10. endpoint refresh, warm-up, 점진 배포, cutover 구현
+### Day 10. SageMaker Pipelines로 전처리→학습→배포 파이프라인 구성
+- 학습 목표:
+  - Day 7~9에서 개별로 실행한 Processing/Training/Endpoint 단계를 하나의 파이프라인으로 연결한다.
+  - 파이프라인을 재실행 가능한 MLOps 자동화 단위로 만든다.
+- 공부 내용:
+  - SageMaker Pipelines 개념 (Pipeline, Step, PipelineSession)
+  - ProcessingStep / TrainingStep / CreateModelStep / UpdateEndpointStep
+  - 파이프라인 파라미터 (ParameterString, ParameterInteger)
+  - 파이프라인 실행 및 모니터링
+- 실습:
+  - `sagemaker/pipeline.py` 작성
+  - ProcessingStep: Day 7의 `preprocess.py`를 step으로 래핑
+  - TrainingStep: Day 8의 training job을 step으로 래핑
+  - CreateModelStep: 학습 artifact로 모델 생성
+  - UpdateEndpointStep: 새 모델로 endpoint 갱신
+  - 파이프라인 실행 및 Console에서 DAG 확인
+  - 파이프라인 재실행 테스트 (파라미터 변경 후 재실행)
+- 레퍼런스:
+  - SageMaker Pipelines: [https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html](https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html)
+  - SageMaker Pipelines SDK: [https://sagemaker.readthedocs.io/en/stable/workflows/pipelines/sagemaker.workflow.pipelines.html](https://sagemaker.readthedocs.io/en/stable/workflows/pipelines/sagemaker.workflow.pipelines.html)
+- 4시간 배분:
+  - 1h Pipelines 개념 + Step 구조 학습
+  - 2h pipeline.py 작성 + 파이프라인 실행
+  - 1h Console DAG 확인 + 재실행 테스트
+
+### Day 11. endpoint refresh, warm-up, 점진 배포, cutover 구현
 - 학습 목표:
   - 새 모델 버전으로 endpoint를 안전하게 교체하는 흐름을 구현한다.
   - 운영 환경에서 필요한 refresh/warm-up/cutover 개념을 실제 절차로 정리한다.
@@ -288,7 +313,7 @@
   - 2h endpoint update/warm-up 실습
   - 1h cutover/rollback 문서화
 
-### Day 11. autoscaling 설정 + endpoint 부하 테스트
+### Day 12. autoscaling 설정 + endpoint 부하 테스트
 - 학습 목표:
   - endpoint의 scale-out/scale-in을 설정하고 기본 동작을 확인한다.
   - endpoint 자체 latency와 TPS를 측정한다.
@@ -314,7 +339,7 @@
   - 2h 부하 테스트
   - 1h CloudWatch metric 해석
 
-### Day 12. FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트
+### Day 13. FastAPI 서비스 API에서 SageMaker endpoint 호출 + E2E 테스트
 - 학습 목표:
   - `FastAPI`를 진짜 서비스 API로 리팩터링한다.
   - `FastAPI -> SageMaker endpoint -> FastAPI response` end-to-end 흐름을 완성한다.
@@ -346,7 +371,7 @@
   - 2h SageMaker 연동 구현
   - 1h E2E 테스트와 fallback 확인
 
-### Day 13. 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리
+### Day 14. 최종 통합: AWS 아키텍처, 운영 전략, 면접 답변 정리
 - 학습 목표:
   - 모든 컴포넌트를 하나의 운영 아키텍처로 연결해 설명한다.
   - 실무와 면접 둘 다 대응 가능한 문서를 만든다.
