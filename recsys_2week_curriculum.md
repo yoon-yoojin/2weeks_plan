@@ -200,14 +200,21 @@
       - `s3://.../gsasrec/input/test/`
   - CloudWatch Logs에서 Processing Job 로그 확인
   - S3 출력 파일 샘플 검증
+  - GitHub Actions 워크플로우 작성 (`.github/workflows/sync-sagemaker-scripts.yml`):
+    - 트리거: `main` 브랜치 push 시 `sagemaker/` 경로 변경 감지
+    - `aws s3 sync sagemaker/ s3://.../code/sagemaker/`로 스크립트 자동 업로드
+    - AWS credentials는 GitHub Secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) 사용
+  - 워크플로우 동작 확인: `preprocess.py` 수정 후 push → S3 반영 확인
 - 레퍼런스:
   - YOOCHOOSE challenge overview: [https://recsys.acm.org/recsys15/challenge/](https://recsys.acm.org/recsys15/challenge/)
   - SageMaker Processing Jobs: [https://docs.aws.amazon.com/sagemaker/latest/dg/processing-job.html](https://docs.aws.amazon.com/sagemaker/latest/dg/processing-job.html)
   - SKLearnProcessor: [https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor)
+  - GitHub Actions + AWS: [https://github.com/aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials)
 - 4시간 배분:
   - 1h Processing Job 개념 + 입출력 경로 규약 학습
-  - 2h preprocess.py 작성 + Processing Job 실행
+  - 1.5h preprocess.py 작성 + Processing Job 실행
   - 1h CloudWatch 로그 확인 + S3 출력 샘플 검증
+  - 0.5h GitHub Actions 워크플로우 작성 + 동작 확인
 
 ### Day 8. SageMaker training job으로 gSASRec 학습
 - 학습 목표:
@@ -280,13 +287,18 @@
   - UpdateEndpointStep: 새 모델로 endpoint 갱신
   - 파이프라인 실행 및 Console에서 DAG 확인
   - 파이프라인 재실행 테스트 (파라미터 변경 후 재실행)
+  - Day 7에서 만든 `sync-sagemaker-scripts.yml` 워크플로우를 확장:
+    - 기존: `sagemaker/` 스크립트만 S3에 sync
+    - 변경: sync 이후 `pipeline.upsert()` 호출 스텝 추가
+    - 결과: `main` push → S3 코드 갱신 → 파이프라인 정의 자동 갱신
 - 레퍼런스:
   - SageMaker Pipelines: [https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html](https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html)
   - SageMaker Pipelines SDK: [https://sagemaker.readthedocs.io/en/stable/workflows/pipelines/sagemaker.workflow.pipelines.html](https://sagemaker.readthedocs.io/en/stable/workflows/pipelines/sagemaker.workflow.pipelines.html)
 - 4시간 배분:
   - 1h Pipelines 개념 + Step 구조 학습
-  - 2h pipeline.py 작성 + 파이프라인 실행
+  - 1.5h pipeline.py 작성 + 파이프라인 실행
   - 1h Console DAG 확인 + 재실행 테스트
+  - 0.5h 워크플로우 확장 + 동작 확인
 
 ### Day 11. endpoint refresh, warm-up, 점진 배포, cutover 구현
 - 학습 목표:
