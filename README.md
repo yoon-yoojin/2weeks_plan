@@ -47,19 +47,25 @@
 
 ## 배치 파이프라인
 
+전처리, 학습, 추론 모두 SageMaker 인프라에서 실행합니다.
+
 ```text
 +---------------------+
 | Open Log Dataset    |
 | (e.g. YOOCHOOSE)    |
+| → S3 raw prefix     |
 +---------------------+
           |
           v
-+---------------------+
-| Preprocessing Job   |
-| - filter sessions   |
-| - remap item ids    |
-| - make sequences    |
-+---------------------+
++------------------------------+
+| SageMaker Processing Job     |
+| (SKLearnProcessor)           |
+| - filter sessions            |
+| - remap item ids             |
+| - make sequences             |
+| input:  s3://.../raw/        |
+| output: s3://.../input/      |
++------------------------------+
           |
           v
 +---------------------+
@@ -69,6 +75,7 @@
           v
 +---------------------+
 | SageMaker Training  |
+| Job                 |
 | - train gSASRec     |
 | - eval metrics      |
 +---------------------+
@@ -85,7 +92,7 @@
           |
           v
 +---------------------------+
-| Endpoint Update           |
+| SageMaker Endpoint Update |
 | - refresh                 |
 | - warm-up                 |
 | - gradual rollout         |
@@ -150,11 +157,10 @@
 - `SageMaker endpoint`
   - ML scoring API
   - 시퀀스/후보군을 입력받아 모델 점수 또는 top-k 결과 반환
-- `Batch pipeline`
-  - 원시 로그 전처리
-  - 학습 데이터 생성
-  - 모델 학습 및 평가
-  - 새 endpoint config 생성과 endpoint refresh 담당
+- `Batch pipeline` (전처리/학습/추론 모두 SageMaker에서 실행)
+  - SageMaker Processing Job으로 원시 로그 전처리 및 학습 데이터 생성
+  - SageMaker Training Job으로 모델 학습 및 평가
+  - 새 endpoint config 생성과 SageMaker endpoint refresh 담당
 
 ## 구현 목표
 

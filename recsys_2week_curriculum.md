@@ -175,32 +175,39 @@
   - 2h contract 문서화
   - 1h 구현 체크리스트 정리
 
-### Day 7. 공개 로그 데이터 전처리 + SageMaker 학습 입력 생성
+### Day 7. 공개 로그 데이터 전처리 + SageMaker Processing Job으로 학습 입력 생성
 - 학습 목표:
   - 원시 로그를 학습 가능한 시퀀스 데이터로 바꾼다.
-  - SageMaker training job 입력을 S3에 올린다.
+  - 전처리를 로컬이 아닌 SageMaker Processing Job으로 실행한다.
+  - Processing Job 입력/출력이 S3와 어떻게 연결되는지 이해한다.
 - 공부 내용:
-  - session filtering
-  - item remapping
-  - train/valid/test split
-  - S3 업로드 구조
+  - SageMaker Processing Job 개념 (ScriptProcessor / SKLearnProcessor)
+  - ProcessingInput / ProcessingOutput 구조
+  - `/opt/ml/processing/input`, `/opt/ml/processing/output` 경로 규약
+  - session filtering, item remapping, train/valid/test split
 - 실습:
-  - `YOOCHOOSE` 클릭 로그 로드
-  - 세션 길이/아이템 빈도 필터링
-  - `item_id -> integer id` 매핑
-  - sequence/label 데이터 생성
-  - `train.parquet`, `valid.parquet`, `test.parquet` 생성
-  - S3 prefix 예시:
-    - `s3://.../gsasrec/input/train/`
-    - `s3://.../gsasrec/input/valid/`
-    - `s3://.../gsasrec/input/test/`
+  - `YOOCHOOSE` 클릭 로그 파일을 S3에 업로드 (로컬에서 1회)
+  - `sagemaker/preprocess.py` 작성:
+    - 세션 길이/아이템 빈도 필터링
+    - `item_id -> integer id` 매핑
+    - sequence/label 데이터 생성
+    - `train.parquet`, `valid.parquet`, `test.parquet` 출력
+  - SKLearnProcessor로 Processing Job 실행:
+    - input: `s3://.../raw/yoochoose/`
+    - output:
+      - `s3://.../gsasrec/input/train/`
+      - `s3://.../gsasrec/input/valid/`
+      - `s3://.../gsasrec/input/test/`
+  - CloudWatch Logs에서 Processing Job 로그 확인
+  - S3 출력 파일 샘플 검증
 - 레퍼런스:
   - YOOCHOOSE challenge overview: [https://recsys.acm.org/recsys15/challenge/](https://recsys.acm.org/recsys15/challenge/)
-  - SageMaker training data input: [https://docs.aws.amazon.com/sagemaker/latest/dg/model-access-training-data.html](https://docs.aws.amazon.com/sagemaker/latest/dg/model-access-training-data.html)
+  - SageMaker Processing Jobs: [https://docs.aws.amazon.com/sagemaker/latest/dg/processing-job.html](https://docs.aws.amazon.com/sagemaker/latest/dg/processing-job.html)
+  - SKLearnProcessor: [https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor)
 - 4시간 배분:
-  - 1h 전처리 규칙 설계
-  - 2h 전처리 코드 작성
-  - 1h S3 업로드/샘플 검증
+  - 1h Processing Job 개념 + 입출력 경로 규약 학습
+  - 2h preprocess.py 작성 + Processing Job 실행
+  - 1h CloudWatch 로그 확인 + S3 출력 샘플 검증
 
 ### Day 8. SageMaker training job으로 gSASRec 학습
 - 학습 목표:
