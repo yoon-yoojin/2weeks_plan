@@ -9,6 +9,7 @@ SageMaker Processing Job 제출 스크립트
   AWS_REGION           - AWS 리전 (기본값: ap-northeast-2)
 
 S3 경로 (s3://2weekplan):
+  코드:  sagemaker/preprocess.py
   입력:  raw/yoochoose/yoochoose-clicks.dat
   출력:  gsasrec/input/train|valid|test/
          gsasrec/meta/item2id.json, id2item.json
@@ -25,13 +26,13 @@ BUCKET = "2weekplan"
 REGION = os.getenv("AWS_REGION", "ap-northeast-2")
 ROLE_ARN = os.getenv("SAGEMAKER_ROLE_ARN")
 
-S3_RAW_INPUT = f"s3://{BUCKET}/raw/yoochoose/"
-S3_TRAIN_OUT = f"s3://{BUCKET}/gsasrec/input/train/"
-S3_VALID_OUT = f"s3://{BUCKET}/gsasrec/input/valid/"
-S3_TEST_OUT  = f"s3://{BUCKET}/gsasrec/input/test/"
-S3_META_OUT  = f"s3://{BUCKET}/gsasrec/meta/"
+S3_SCRIPT_PATH = f"s3://{BUCKET}/sagemaker/preprocess.py"
 
-SCRIPT_PATH  = "sagemaker/preprocess.py"
+S3_RAW_INPUT   = f"s3://{BUCKET}/raw/yoochoose/"
+S3_TRAIN_OUT   = f"s3://{BUCKET}/gsasrec/input/train/"
+S3_VALID_OUT   = f"s3://{BUCKET}/gsasrec/input/valid/"
+S3_TEST_OUT    = f"s3://{BUCKET}/gsasrec/input/test/"
+S3_META_OUT    = f"s3://{BUCKET}/gsasrec/meta/"
 
 
 def parse_args() -> argparse.Namespace:
@@ -61,7 +62,7 @@ def main() -> None:
     )
 
     processor.run(
-        code=SCRIPT_PATH,
+        code=S3_SCRIPT_PATH,
         inputs=[
             ProcessingInput(
                 source=S3_RAW_INPUT,
