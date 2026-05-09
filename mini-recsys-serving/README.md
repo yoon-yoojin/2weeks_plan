@@ -85,15 +85,15 @@ docker logs -f <컨테이너ID>
 # ECR 로그인 (12시간 유효)
 aws ecr get-login-password --region ap-northeast-2 \
   | docker login --username AWS --password-stdin \
-  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com
+  <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com
 
 # 로컬 이미지에 ECR URI 태그 붙이기
 docker tag mini-recsys-api:latest \
-  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
+  <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
 
 # ECR에 푸시
 docker push \
-  767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
+  <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api:latest
 
 # 푸시 확인
 aws ecr describe-images \
@@ -101,7 +101,7 @@ aws ecr describe-images \
   --region ap-northeast-2
 ```
 
-ECR 레포지토리: `767398048885.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api`
+ECR 레포지토리: `<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/mini-recsys-api`
 
 ## Lambda 핸즈온 (Day 5)
 
